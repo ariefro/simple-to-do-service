@@ -1,0 +1,25 @@
+syntax = "proto3";
+package pb;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/ariefro/simple-to-do-service/api/protogen/todo";
+
+message ToDo {
+    int64 id = 1;
+    string title = 2;
+    string description = 3;
+    google.protobuf.Timestamp reminder = 4;
+}
+
+message CreateToDoRequest {
+    ToDo to_do = 1;
+}
+
+message CreateToDoResponse {
+    int64 id = 1;
+}
+
+service ToDoService {
+    rpc Create(CreateToDoRequest) returns (CreateToDoResponse) {}
+}
