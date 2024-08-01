@@ -20,6 +20,22 @@ message CreateToDoResponse {
     int64 id = 1;
 }
 
+message ReadToDoRequest {
+    int64 id = 1;
+}
+
+message ReadToDoResponse {
+    ToDo to_do = 1;
+}
+
+message ReadAllToDoRequest {}
+
+message ReadAllToDoResponse {
+    repeated ToDo to_do = 1;
+}
+
 service ToDoService {
     rpc Create(CreateToDoRequest) returns (CreateToDoResponse) {}
+    rpc Read(ReadToDoRequest) returns (ReadToDoResponse) {}
+    rpc ReadAll(ReadAllToDoRequest) returns (ReadAllToDoResponse) {}
 }

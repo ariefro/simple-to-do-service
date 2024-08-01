@@ -23,6 +23,8 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ToDoServiceClient interface {
 	Create(ctx context.Context, in *CreateToDoRequest, opts ...grpc.CallOption) (*CreateToDoResponse, error)
+	Read(ctx context.Context, in *ReadToDoRequest, opts ...grpc.CallOption) (*ReadToDoResponse, error)
+	ReadAll(ctx context.Context, in *ReadAllRequest, opts ...grpc.CallOption) (*ReadAllResponse, error)
 }
 
 type toDoServiceClient struct {
@@ -42,11 +44,31 @@ func (c *toDoServiceClient) Create(ctx context.Context, in *CreateToDoRequest, o
 	return out, nil
 }
 
+func (c *toDoServiceClient) Read(ctx context.Context, in *ReadToDoRequest, opts ...grpc.CallOption) (*ReadToDoResponse, error) {
+	out := new(ReadToDoResponse)
+	err := c.cc.Invoke(ctx, "/pb.ToDoService/Read", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *toDoServiceClient) ReadAll(ctx context.Context, in *ReadAllRequest, opts ...grpc.CallOption) (*ReadAllResponse, error) {
+	out := new(ReadAllResponse)
+	err := c.cc.Invoke(ctx, "/pb.ToDoService/ReadAll", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ToDoServiceServer is the server API for ToDoService service.
 // All implementations must embed UnimplementedToDoServiceServer
 // for forward compatibility
 type ToDoServiceServer interface {
 	Create(context.Context, *CreateToDoRequest) (*CreateToDoResponse, error)
+	Read(context.Context, *ReadToDoRequest) (*ReadToDoResponse, error)
+	ReadAll(context.Context, *ReadAllRequest) (*ReadAllResponse, error)
 	mustEmbedUnimplementedToDoServiceServer()
 }
 
@@ -56,6 +78,12 @@ type UnimplementedToDoServiceServer struct {
 
 func (UnimplementedToDoServiceServer) Create(context.Context, *CreateToDoRequest) (*CreateToDoResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Create not implemented")
+}
+func (UnimplementedToDoServiceServer) Read(context.Context, *ReadToDoRequest) (*ReadToDoResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Read not implemented")
+}
+func (UnimplementedToDoServiceServer) ReadAll(context.Context, *ReadAllRequest) (*ReadAllResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ReadAll not implemented")
 }
 func (UnimplementedToDoServiceServer) mustEmbedUnimplementedToDoServiceServer() {}
 
@@ -88,6 +116,42 @@ func _ToDoService_Create_Handler(srv interface{}, ctx context.Context, dec func(
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ToDoService_Read_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReadToDoRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ToDoServiceServer).Read(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/pb.ToDoService/Read",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ToDoServiceServer).Read(ctx, req.(*ReadToDoRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ToDoService_ReadAll_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReadAllRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ToDoServiceServer).ReadAll(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/pb.ToDoService/ReadAll",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ToDoServiceServer).ReadAll(ctx, req.(*ReadAllRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ToDoService_ServiceDesc is the grpc.ServiceDesc for ToDoService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -98,6 +162,14 @@ var ToDoService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Create",
 			Handler:    _ToDoService_Create_Handler,
+		},
+		{
+			MethodName: "Read",
+			Handler:    _ToDoService_Read_Handler,
+		},
+		{
+			MethodName: "ReadAll",
+			Handler:    _ToDoService_ReadAll_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
