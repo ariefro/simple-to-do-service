@@ -34,8 +34,26 @@ message ReadAllToDoResponse {
     repeated ToDo to_do = 1;
 }
 
+message UpdateToDoRequest {
+    ToDo to_do = 1;
+}
+
+message UpdateToDoResponse {
+    int64 updated = 1;
+}
+
+message DeleteRequest {
+    int64 id = 1;
+}
+
+message DeleteResponse {
+    int64 updated = 1;
+}
+
 service ToDoService {
     rpc Create(CreateToDoRequest) returns (CreateToDoResponse) {}
     rpc Read(ReadToDoRequest) returns (ReadToDoResponse) {}
     rpc ReadAll(ReadAllToDoRequest) returns (ReadAllToDoResponse) {}
+    rpc Update(UpdateToDoRequest) returns (UpdateToDoResponse) {}
+    rpc Delete(DeleteRequest) returns (DeleteResponse) {}
 }
