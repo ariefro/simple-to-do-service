@@ -15,7 +15,9 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
+const testTitle = "Dummy title"
 const testDescription = "This is a test description"
+const readQuery = "SELECT id, title, description, reminder FROM todo Where id = ?"
 
 func TestCreateToDoSuccess(t *testing.T) {
 	// mock database
@@ -31,7 +33,7 @@ func TestCreateToDoSuccess(t *testing.T) {
 	// define input
 	req := &todo.CreateToDoRequest{
 		ToDo: &todo.ToDo{
-			Title:       "Dummy To Do",
+			Title:       testTitle,
 			Description: testDescription,
 			Reminder:    timestamppb.New(time.Now()),
 		},
@@ -81,7 +83,7 @@ func TestCreateToDoDatabaseError(t *testing.T) {
 
 	req := &todo.CreateToDoRequest{
 		ToDo: &todo.ToDo{
-			Title:       "Dummy To Do",
+			Title:       testTitle,
 			Description: testDescription,
 			Reminder:    timestamppb.New(time.Now()),
 		},
@@ -98,4 +100,74 @@ func TestCreateToDoDatabaseError(t *testing.T) {
 	assert.Equal(t, codes.Internal, status.Code(err))
 	assert.Contains(t, err.Error(), "failed to insert into todo")
 	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestReadToDoSuccess(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	assert.NoError(t, err)
+	defer db.Close()
+
+	srv := service.NewTodoServiceServer(db)
+
+	mock.ExpectQuery(readQuery).
+		WithArgs(1).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "title", "description", "reminder"}).
+			AddRow(1, testTitle, testDescription, time.Now()))
+
+	req := &todo.ReadToDoRequest{
+		Id: 1,
+	}
+
+	res, err := srv.Read(context.Background(), req)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, res)
+	assert.Equal(t, int64(1), res.ToDo.Id)
+	assert.Equal(t, testTitle, res.ToDo.Title)
+}
+
+func TestReadToDoNotFound(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	assert.NoError(t, err)
+	defer db.Close()
+
+	srv := service.NewTodoServiceServer(db)
+
+	mock.ExpectQuery(readQuery).
+		WithArgs(1).
+		WillReturnRows(sqlmock.NewRows([]string{}))
+
+	req := &todo.ReadToDoRequest{
+		Id: 1,
+	}
+
+	res, err := srv.Read(context.Background(), req)
+
+	assert.Nil(t, res)
+	assert.Error(t, err)
+	assert.Equal(t, codes.NotFound, status.Code(err))
+	assert.Contains(t, err.Error(), "todo not found")
+}
+
+func TestReadToDoQueryError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	assert.NoError(t, err)
+	defer db.Close()
+
+	srv := service.NewTodoServiceServer(db)
+
+	mock.ExpectQuery(readQuery).
+		WithArgs(1).
+		WillReturnError(sql.ErrConnDone)
+
+	req := &todo.ReadToDoRequest{
+		Id: 1,
+	}
+
+	res, err := srv.Read(context.Background(), req)
+
+	assert.Nil(t, res)
+	assert.Error(t, err)
+	assert.Equal(t, codes.Internal, status.Code(err))
+	assert.Contains(t, err.Error(), "failed to retrive todo")
 }
