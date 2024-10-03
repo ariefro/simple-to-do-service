@@ -3,7 +3,7 @@ package service_test
 import (
 	"context"
 	"database/sql"
-	"fmt"
+	"regexp"
 	"testing"
 	"time"
 
@@ -190,8 +190,6 @@ func TestReadAllToDoSuccess(t *testing.T) {
 	req := &todo.ReadAllToDoRequest{}
 	res, err := svc.ReadAll(context.Background(), req)
 
-	fmt.Println("pppp",res)
-
 	assert.NoError(t, err)
 	assert.NotNil(t, res)
 	assert.Equal(t, 2, len(res.ToDo)) // expecting 2 entries
@@ -205,4 +203,82 @@ func TestReadAllToDoSuccess(t *testing.T) {
 	assert.Equal(t, "Description 2", res.ToDo[1].Description)
 
 	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestUpdateToDoSuccess(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	assert.NoError(t, err)
+	defer db.Close()
+
+	svc := service.NewTodoServiceServer(db)
+
+	req := &todo.UpdateToDoRequest{
+		ToDo: &todo.ToDo{
+			Id: 1,
+			Title: "Updated Title",
+			Description: "Updated description",
+			Reminder: timestamppb.Now(),
+		},
+	}
+
+	mock.ExpectExec(regexp.QuoteMeta("UPDATE todo SET title = ?, description = ?, reminder = ? WHERE id = ?")).
+		WithArgs(req.ToDo.GetTitle(), req.ToDo.GetDescription(), req.ToDo.GetReminder().AsTime(), req.ToDo.GetId()).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
+	res, err := svc.Update(context.Background(), req)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, res)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestUpdateToDoNotFound(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	assert.NoError(t, err)
+	defer db.Close()
+
+	srv := service.NewTodoServiceServer(db)
+
+	req := &todo.UpdateToDoRequest{
+		ToDo: &todo.ToDo{
+			Id:          1,
+			Title:       "Updated Title",
+			Description: "Updated Description",
+			Reminder:    timestamppb.New(time.Now()),
+		},
+	}
+
+	mock.ExpectExec(regexp.QuoteMeta("UPDATE todo SET title = ?, description = ?, reminder = ? WHERE id = ?")).
+		WithArgs(req.ToDo.GetTitle(), req.ToDo.GetDescription(), req.ToDo.GetReminder().AsTime(), req.ToDo.GetId()).
+		WillReturnResult(sqlmock.NewResult(1, 0)) // No rows updated
+
+	res, err := srv.Update(context.Background(), req)
+
+	assert.Nil(t, res)
+	assert.Error(t, err)
+	assert.Equal(t, codes.NotFound, status.Code(err))
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestUpdateToDoInvalidArgument(t *testing.T) {
+	db, _, err := sqlmock.New()
+	assert.NoError(t, err)
+	defer db.Close()
+
+	srv := service.NewTodoServiceServer(db)
+
+	req := &todo.UpdateToDoRequest{
+		ToDo: &todo.ToDo{
+			Id:          0,
+			Title:       "Updated Title",
+			Description: "Updated description",
+			Reminder:    timestamppb.New(time.Now()),
+		},
+	}
+
+	res, err := srv.Update(context.Background(), req)
+
+	assert.Nil(t, res)
+	assert.Error(t, err)
+	assert.Equal(t, codes.InvalidArgument, status.Code(err))
 }
