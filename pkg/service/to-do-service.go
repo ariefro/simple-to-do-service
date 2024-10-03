@@ -123,3 +123,33 @@ func (s *toDoServiceServer) ReadAll(ctx context.Context, req *todo.ReadAllToDoRe
 		ToDo: todos,
 	}, nil
 }
+
+func (s *toDoServiceServer) Update(ctx context.Context, req *todo.UpdateToDoRequest) (*todo.UpdateToDoResponse, error) {
+	if req.ToDo.GetId() == 0 {
+		return nil, status.Error(codes.InvalidArgument, "todo id is required")
+	}
+
+	if err := util.ValidateTitle(req.ToDo.GetTitle()); err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
+	query := "UPDATE todo SET title = ?, description = ?, reminder = ? WHERE id = ?"
+
+	reminder := req.ToDo.GetReminder().AsTime()
+	res, err := s.db.ExecContext(ctx, query, req.ToDo.GetTitle(), req.ToDo.GetDescription(), reminder, req.ToDo.GetId())
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to update todo: " + err.Error())
+	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to retrieve affected rows: " + err.Error())
+	}
+	if rowsAffected == 0 {
+		return nil, status.Error(codes.NotFound, "todo not found")
+	}
+
+	return &todo.UpdateToDoResponse{
+		Updated: req.ToDo.Id,
+	}, nil
+}
