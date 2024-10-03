@@ -85,7 +85,9 @@ func (s *toDoServiceServer) ReadAll(ctx context.Context, req *todo.ReadAllToDoRe
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to retrieve todos: "+err.Error())
 	}
-	rows.Close()
+	// defer closing rows to ensure it runs after data has been processed
+	defer rows.Close()
+
 
 	var todos []*todo.ToDo
 	for rows.Next() {

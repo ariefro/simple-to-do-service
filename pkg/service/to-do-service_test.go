@@ -3,6 +3,7 @@ package service_test
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"testing"
 	"time"
 
@@ -170,4 +171,38 @@ func TestReadToDoQueryError(t *testing.T) {
 	assert.Error(t, err)
 	assert.Equal(t, codes.Internal, status.Code(err))
 	assert.Contains(t, err.Error(), "failed to retrive todo")
+}
+
+func TestReadAllToDoSuccess(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	assert.NoError(t, err)
+	defer db.Close()
+
+	query := "SELECT id, title, description, reminder FROM todo"
+	rows := sqlmock.NewRows([]string{"id", "title", "description", "reminder"}).
+		AddRow(1, "Dummy Todo 1", "Description 1", time.Now()).
+		AddRow(2, "Dummy Todo 2", "Description 2", time.Now())
+
+	svc := service.NewTodoServiceServer(db)
+
+	mock.ExpectQuery(query).WillReturnRows(rows)
+
+	req := &todo.ReadAllToDoRequest{}
+	res, err := svc.ReadAll(context.Background(), req)
+
+	fmt.Println("pppp",res)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, res)
+	assert.Equal(t, 2, len(res.ToDo)) // expecting 2 entries
+
+	assert.Equal(t, int64(1), res.ToDo[0].Id)
+	assert.Equal(t, "Dummy Todo 1", res.ToDo[0].Title)
+	assert.Equal(t, "Description 1", res.ToDo[0].Description)
+
+	assert.Equal(t, int64(2), res.ToDo[1].Id)
+	assert.Equal(t, "Dummy Todo 2", res.ToDo[1].Title)
+	assert.Equal(t, "Description 2", res.ToDo[1].Description)
+
+	assert.NoError(t, mock.ExpectationsWereMet())
 }
