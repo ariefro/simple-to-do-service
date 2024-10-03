@@ -77,3 +77,47 @@ func (s *toDoServiceServer) Read(ctx context.Context, req *todo.ReadToDoRequest)
 		},
 	}, nil
 }
+
+func (s *toDoServiceServer) ReadAll(ctx context.Context, req *todo.ReadAllToDoRequest) (*todo.ReadAllToDoResponse, error) {
+	query := "SELECT id, title, description, reminder FROM todo"
+
+	rows, err := s.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to retrieve todos: "+err.Error())
+	}
+	rows.Close()
+
+	var todos []*todo.ToDo
+	for rows.Next() {
+		var(
+			id int64
+			title string
+			description string
+			reminder time.Time
+		)
+
+		// scan the values from the current row
+		if err := rows.Scan(&id, &title,&description, &reminder); err != nil {
+			return nil, status.Error(codes.Internal, "failed to scan todo item: "+err.Error())
+		}
+
+		// Convert reminder to protobuf timestamp
+		reminderProto := timestamppb.New(reminder)
+
+		todos = append(todos, &todo.ToDo{
+			Id: id,
+			Title: title,
+			Description: description,
+			Reminder: reminderProto,
+		})
+	}
+	
+	// Check if there was an error during row iteration
+	if err := rows.Err(); err != nil {
+		return nil, status.Error(codes.Internal, "failed to retrieve todos: "+err.Error())
+	}
+
+	return &todo.ReadAllToDoResponse{
+		ToDo: todos,
+	}, nil
+}
