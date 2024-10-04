@@ -41,7 +41,8 @@ func TestCreateToDoSuccess(t *testing.T) {
 	}
 
 	// mock database behavior for success case
-	mock.ExpectExec("INSERT INTO todo").WithArgs(req.ToDo.GetTitle(), req.ToDo.GetDescription(), req.ToDo.GetReminder().AsTime()).
+	mock.ExpectExec("INSERT INTO todo").
+		WithArgs(req.ToDo.GetTitle(), req.ToDo.GetDescription(), req.ToDo.GetReminder().AsTime()).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
 	res, err := srv.Create(context.Background(), req)
@@ -281,4 +282,50 @@ func TestUpdateToDoInvalidArgument(t *testing.T) {
 	assert.Nil(t, res)
 	assert.Error(t, err)
 	assert.Equal(t, codes.InvalidArgument, status.Code(err))
+}
+
+func TestDeleteToDoSuccess(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	assert.NoError(t, err)
+	defer db.Close()
+
+	svc := service.NewTodoServiceServer(db)
+
+	mock.ExpectExec(regexp.QuoteMeta("DELETE FROM todo WHERE id = ?")).
+		WithArgs(1).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	req := &todo.DeleteRequest{
+		Id: 1,
+	}
+
+	res, err := svc.Delete(context.Background(), req)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, res)
+	assert.True(t, res.Success)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestDeleteToDoNotFound(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	assert.NoError(t, err)
+	defer db.Close()
+
+	svc := service.NewTodoServiceServer(db)
+
+	mock.ExpectExec(regexp.QuoteMeta("DELETE FROM todo WHERE id = ?")).
+		WithArgs(1).
+		WillReturnResult(sqlmock.NewResult(0, 0)) // No rows deleted
+
+	req := &todo.DeleteRequest{
+		Id: 1,
+	}
+
+	res, err := svc.Delete(context.Background(), req)
+
+	assert.Error(t, err)
+	assert.Nil(t, res)
+	assert.Equal(t, codes.NotFound, status.Code(err))
+	assert.NoError(t, mock.ExpectationsWereMet())
 }
