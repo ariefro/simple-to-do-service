@@ -39,7 +39,7 @@ message UpdateToDoRequest {
 }
 
 message UpdateToDoResponse {
-    int64 updated = 1;
+    bool success = 1;
 }
 
 message DeleteRequest {
@@ -47,7 +47,7 @@ message DeleteRequest {
 }
 
 message DeleteResponse {
-    int64 updated = 1;
+    bool success = 1;
 }
 
 service ToDoService {

@@ -150,6 +150,31 @@ func (s *toDoServiceServer) Update(ctx context.Context, req *todo.UpdateToDoRequ
 	}
 
 	return &todo.UpdateToDoResponse{
-		Updated: req.ToDo.Id,
+		Success: true,
+	}, nil
+}
+
+func (s *toDoServiceServer) Delete(ctx context.Context, req *todo.DeleteRequest) (*todo.DeleteResponse, error) {
+	if req.GetId() == 0 {
+		return nil, status.Error(codes.InvalidArgument, "todo id is required")
+	}
+
+	query := "DELETE FROM todo WHERE id = ?"
+
+	res, err := s.db.ExecContext(ctx, query, req.GetId())
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to delete todo: " + err.Error())
+	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to retrieve affected rows: " + err.Error())
+	}
+	if rowsAffected == 0 {
+		return nil, status.Error(codes.NotFound, "todo not found")
+	}
+
+	return &todo.DeleteResponse{
+		Success: true,
 	}, nil
 }
